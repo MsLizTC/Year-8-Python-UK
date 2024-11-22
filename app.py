@@ -54,8 +54,7 @@ model = genai.GenerativeModel(
 # You may need to update the file paths
 files = [
   upload_to_gemini("Unit guide_6_Introduction to Python programming_Y8_v1.2.docx", mime_type="application/vnd.google-apps.document"),
-  upload_to_gemini("Summative assessment answers – Introduction to Python programming – Y8.docx", mime_type="application/vnd.google-apps.document"),
-  upload_to_gemini("Summative assessment – Introduction to Python programming – Y8.docx", mime_type="application/vnd.google-apps.document"),
+  
 ]
 
 # Some files have a processing delay. Wait for them to be ready.
