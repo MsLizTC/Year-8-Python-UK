@@ -66,8 +66,6 @@ chat_session = model.start_chat(
       "role": "user",
       "parts": [
         files[0],
-        files[1],
-        files[2],
       ],
     },
     {
