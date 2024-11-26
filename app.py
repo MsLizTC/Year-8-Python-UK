@@ -1,103 +1,57 @@
 import os
 import time
-import streamlit as st  # Added Streamlit
+import streamlit as st
 import google.generativeai as genai
+import PyPDF2  # Library to read PDF files
 
-# Set up Streamlit page
-st.title("Year 8 Python Programming Tutor")
-st.write("This app is designed to assist with teaching an introduction to Python programming for Year 8 students.")
+# Configure API key
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-# Configure the Generative AI API
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+def extract_text_from_pdf(file_path):
+    """Extract text from the uploaded PDF file."""
+    with open(file_path, "rb") as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+    return text
 
-def upload_to_gemini(path, mime_type=None):
-    """Uploads the given file to Gemini.
+# Upload and process the file
+uploaded_file_path = "Unit guide_6_Introduction to Python programming_Y8_v1.2.pdf"
+file_content = extract_text_from_pdf(uploaded_file_path)
 
-    See https://ai.google.dev/gemini-api/docs/prompting_with_media
-    """
-    try:
-        file = genai.upload_file(path, mime_type=mime_type)
-        st.success(f"Uploaded file '{file.display_name}' as: {file.uri}")
-        return file
-    except Exception as e:
-        st.error(f"Error uploading file: {e}")
-        raise
-
-def wait_for_files_active(files):
-    """Waits for the given files to be active.
-
-    Some files uploaded to the Gemini API need to be processed before they can be
-    used as prompt inputs. The status can be seen by querying the file's "state"
-    field.
-    """
-    try:
-        st.info("Waiting for file processing...")
-        for name in (file.name for file in files):
-            file = genai.get_file(name)
-            while file.state.name == "PROCESSING":
-                st.write("Processing...")
-                time.sleep(10)
-                file = genai.get_file(name)
-            if file.state.name != "ACTIVE":
-                raise Exception(f"File {file.name} failed to process")
-        st.success("All files processed successfully!")
-    except Exception as e:
-        st.error(f"Error processing files: {e}")
-        raise
-
-# Create the model
+# Define model configuration
 generation_config = {
-    "temperature": 1,
-    "top_p": 0.95,
-    "top_k": 64,
-    "max_output_tokens": 8192,
+    "temperature": 0.7,
+    "top_p": 0.9,
+    "max_output_tokens": 300,  # Limit response length
     "response_mime_type": "text/plain",
 }
 
-try:
-    model = genai.GenerativeModel(
-        model_name="learnlm-1.5-pro-experimental",
-        generation_config=generation_config,
-        system_instruction="Be a friendly, supportive tutor. Guide the student to meet their goals, gently\n"
-        "nudging them on task if they stray. Ask guiding questions to help your students\n"
-        "take incremental steps toward understanding big concepts, and ask probing\n"
-        "questions to help them dig deep into those ideas. Pose just one question per\n"
-        "conversation turn so you don't overwhelm the student. Wrap up this conversation\n"
-        "once the student has shown evidence of understanding.\n"
-        "The topic is from the Key Stage 3 Computer Science Curriculum for year 8 an Introduction to Python programming",
-    )
-except Exception as e:
-    st.error(f"Error creating model: {e}")
-    raise
+model = genai.GenerativeModel(
+    model_name="learnlm-1.5-pro-experimental",
+    generation_config=generation_config,
+    system_instruction=f"You are a helpful tutor. Use the following document content for context:\n\n{file_content}",
+)
 
-# Upload files and ensure they're processed
-try:
-    files = [
-        upload_to_gemini("Unit guide_6_Introduction to Python programming_Y8_v1.2.pdf", mime_type="application/pdf"),
-    ]
-    wait_for_files_active(files)
-except Exception as e:
-    st.error(f"File upload or processing failed: {e}")
+# Streamlit UI
+st.title("AI Tutor Chatbot")
+st.write("Ask the tutor questions about the unit, and it will guide you with context from the provided document.")
 
-# Start chat session
-try:
-    chat_session = model.start_chat(
-        history=[
-            {
-                "role": "model",
-                "parts": [
-                    files[0],
-                    "Looking at the Unit Overview, what do you think the main goal of this unit is?",
-                ],
-            },
-        ]
-    )
+# User input
+user_input = st.text_input("Enter your question for the tutor:")
 
-    # User input
-    user_input = st.text_input("Enter your question for the tutor:")
-    if user_input:
-        response = chat_session.send_message(user_input)
+if user_input:
+    try:
+        # Send user question to AI model
+        response = model.generate_prompt(prompt=user_input)
         st.subheader("AI Tutor Response")
         st.write(response.text)
-except Exception as e:
-    st.error(f"Error during chat session: {e}")
+
+        # Generate a follow-up question based on the response
+        follow_up_prompt = f"Based on the following context, ask a thought-provoking question: {response.text}"
+        follow_up_response = model.generate_prompt(prompt=follow_up_prompt)
+        st.subheader("Follow-up Question")
+        st.write(follow_up_response.text)
+    except Exception as e:
+        st.error(f"Error: {e}")
