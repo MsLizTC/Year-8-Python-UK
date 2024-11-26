@@ -4,7 +4,7 @@ import google.generativeai as genai
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-def upload_to_gemini(path, mime_type=None):
+def upload_to_gemini("Unit guide_6_Introduction to Python programming_Y8_v1.2.pdf", mime_type="application/pdf"):
   """Uploads the given file to Gemini.
 
   See https://ai.google.dev/gemini-api/docs/prompting_with_media
