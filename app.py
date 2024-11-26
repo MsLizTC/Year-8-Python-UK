@@ -62,14 +62,9 @@ wait_for_files_active(files)
 chat_session = model.start_chat(
   history=[
     {
-      "role": "user",
-      "parts": [
-        files[0],
-      ],
-    },
-    {
       "role": "model",
       "parts": [
+        files[0],
         "Looking at the Unit Overview, what do you think the main goal of this unit is?",
       ],
     },
