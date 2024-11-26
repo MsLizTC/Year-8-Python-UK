@@ -1,30 +1,20 @@
 import os
 import time
-import streamlit as st
 import google.generativeai as genai
-import PyPDF2  # Library to read PDF files
+import streamlit as st
 
-# Configure API key
+# Configure the generative AI API
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
-def extract_text_from_pdf(file_path):
-    """Extract text from the uploaded PDF file."""
-    with open(file_path, "rb") as file:
-        reader = PyPDF2.PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-    return text
+# Define the document content
+file_content = "Unit guide content or extracted data here (replace with actual content)."
 
-# Upload and process the file
-uploaded_file_path = "Unit guide_6_Introduction to Python programming_Y8_v1.2.pdf"
-file_content = extract_text_from_pdf(uploaded_file_path)
-
-# Define model configuration
+# Create the model
 generation_config = {
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "max_output_tokens": 300,  # Limit response length
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 64,
+    "max_output_tokens": 8192,
     "response_mime_type": "text/plain",
 }
 
@@ -35,22 +25,36 @@ model = genai.GenerativeModel(
 )
 
 # Streamlit UI
-st.title("AI Tutor Chatbot")
+st.title("Year 8 Python AI Tutor Chatbot")
 st.write("Ask the tutor questions about the unit, and it will guide you with context from the provided document.")
+st.write("Example questions:")
+st.markdown("- What should I focus on when learning Python programming?\n- What's the difference between an algorithm and a programme?")
 
-# User input
+# Start a chat session and include an initial question in the history
+chat_session = model.start_chat(
+    history=[
+        {
+            "role": "model",
+            "parts": [
+                "Let's begin! What's the difference between an algorithm and a programme?",
+            ],
+        },
+    ]
+)
+
+# Handle user input
 user_input = st.text_input("Enter your question for the tutor:")
 
 if user_input:
     try:
         # Send user question to AI model
-        response = model.generate_prompt(prompt=user_input)
+        response = chat_session.send_message(user_input)
         st.subheader("AI Tutor Response")
         st.write(response.text)
 
         # Generate a follow-up question based on the response
         follow_up_prompt = f"Based on the following context, ask a thought-provoking question: {response.text}"
-        follow_up_response = model.generate_prompt(prompt=follow_up_prompt)
+        follow_up_response = chat_session.send_message(follow_up_prompt)
         st.subheader("Follow-up Question")
         st.write(follow_up_response.text)
     except Exception as e:
